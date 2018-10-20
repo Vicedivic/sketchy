@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<!--suppress ALL -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML5 Canvas</title>
+</head>
+<body>
+<form id="stroketype>">
+  <fieldset id="line-style">
+    <label class="fieldset-label" for="line-style">Line Style <br></label>
+    <input class="checkbox" type="checkbox" id="square" value="square" />
+    <label class="option-label" for="square">Squared</label>
+  </fieldset>
+  <fieldset id="line-color">
+    <label class="fieldset-label" for="line-color">Line Color <br></label>
+    <input id="base" type="color" name="base" >
+    <input class="checkbox" id="rainbow-checkbox" type="checkbox">
+    <label class="option-label" for="rainbow-checkbox">Rainbow</label>
+  </fieldset>
+  <fieldset id="line-width">
+    <label class="fieldset-label" for="line-width">Line Width <br></label>
+    <input class="checkbox" id="changing-width" type="checkbox">
+    <label class="option-label" for="changing-width">Auto-Changing Width</label>&nbsp &nbsp &nbsp &nbsp
+    <label class="option-label" id="width-label" for="width-value">Width</label>
+    <input id="width-value" type="range" min="2" max=100">
+  </fieldset>
+  <button onclick="clearboard(e)">Clear Board</button>
+  <p id="support">&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbspSupport & Feedback: <a href="mailto:victor@lfpost.dk">victor@lfpost.dk</a></p>
+</form>
+<canvas id="draw" width="800" height="800"></canvas>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+    let squared_checkbox = document.querySelector('#square');
+    let rainbow_checkbox = document.querySelector('#rainbow-checkbox');
+    let colorpicker = document.querySelector('#base');
+    let $colorpicker = $('#base');
+    let changing_width_checkbox = document.querySelector('#changing-width');
+    let $width = $('#width-value');
+    let width_range = document.querySelector('#width-value');
+    colorpicker.value = 'hsl(1, 100%, 50%)';
+    const canvas = document.querySelector('#draw');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = (window.innerHeight - 81);
+    /* window.addEventListener("resize", () => {
+        canvas.width = window.innerWidth;
+        canvas.height = (window.innerHeight - 81);
+
+        if (squared_checkbox.checked) {
+            ctx.lineCap = 'square';
+            ctx.lineJoin = 'round';
+        } else {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+    }); */
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = 100;
+    let direction = true;
+    if (squared_checkbox.checked) {
+        ctx.lineCap = 'square';
+        ctx.lineJoin = 'round';
+    } else {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+    squared_checkbox.addEventListener('change', () => {
+        if (squared_checkbox.checked) {
+            ctx.lineCap = 'square';
+            ctx.lineJoin = 'round';
+        } else {
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+    });
+
+    let changing_width = changing_width_checkbox.checked;
+
+    if (changing_width) {
+        $width.addClass('invisible');
+        $('#width-label').addClass('invisible');
+    }
+
+    changing_width_checkbox.addEventListener('change', () => {
+        changing_width = changing_width_checkbox.checked;
+        if (changing_width) {
+            $width.addClass('invisible');
+            $('#width-label').addClass('invisible');
+            fn_changing_width();
+        } else {
+            $width.removeClass('invisible');
+            $('#width-label').removeClass('invisible');
+            ctx.lineWidth = width_range.value;
+        }
+    });
+
+    function fn_changing_width() {
+        // if linewidth becomes over 100 it will start decreasing
+        // and if it becomes lesser than 2 it will start increasing
+        if (ctx.lineWidth == 1) {
+            ctx.lineWidth = 2;
+        }
+        if (ctx.lineWidth >= 100 || ctx.lineWidth <= 2 ) {
+            direction = !direction;
+        }
+
+        if(direction) {
+            ctx.lineWidth += 2;
+        } else {
+            ctx.lineWidth -= 2;
+        }
+    }
+
+    width_range.addEventListener('change', ctx.lineWidth = $width.value);
+    width_range.addEventListener('mouseover', ctx.lineWidth = $width.value);
+
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let hue = 0;
+    let rainbow = true;
+    rainbow = rainbow_checkbox.checked;
+
+    let color;
+
+    rainbow_checkbox.addEventListener('change', () => {
+        if (rainbow_checkbox.checked) {
+            $colorpicker.addClass('invisible');
+            rainbow = true;
+        } else {
+            $colorpicker.removeClass('invisible');
+            rainbow = false;
+        }
+    });
+
+    if (rainbow) {
+        $colorpicker.addClass('invisible');
+    }
+
+    function rainbowcolor() {
+        color = `hsl(${hue}, 100%, 50%)`;
+        hue++;
+        if (hue >= 360) {
+            hue = 0;
+        }
+    }
+
+    function draw(e) {
+        if (!isDrawing) return; // stop the fn from running when they are not moused down
+
+        if (changing_width) {
+            fn_changing_width();
+        } else {
+            ctx.lineWidth = width_range.value;
+        }
+
+
+        colorpicker.addEventListener('change', () => {
+            color = colorpicker.value;
+        });
+
+        if (rainbow) {
+            rainbowcolor();
+        } else {
+            color = colorpicker.value;
+        }
+
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+
+        // start from
+        ctx.moveTo(lastX, lastY);
+        // go to
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+        // getting our new offset
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', () => {
+        isDrawing = false;
+    });
+    canvas.addEventListener('mouseout', () => {
+        isDrawing = false;
+    });
+
+    function clearboard(e) {
+        e.preventDefault()
+        ctx.clearRect(0, $('form').height, canvas.width, (canvas.height - $('form').height));
+    }
+
+    ctx.shadowColor = color;
+
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro');
+
+  label, button, p {
+    font-family: "Source Sans Pro", Futura, arial, sans-serif;
+  }
+
+  button {
+    font-family: "Source Sans Pro", Futura, arial, sans-serif;
+    border-radius: 0px;
+    background-color: black;
+    color: #fff;
+    border: none;
+    padding: 8px;
+    display: inline-grid;
+    font-size: 35px;
+  }
+
+  canvas:hover {
+    cursor: crosshair;
+  }
+
+  button:hover {
+    cursor: pointer;
+    background-color: hsl(248, 21.4%, 20%);
+  }
+
+  html, body {
+    margin:0;
+  }
+
+  form {
+    border-bottom: 2px solid black;
+    background-color: hsl(248, 21.4%, 40%);
+  }
+
+  /* Labels */
+
+  .option-label {
+    color: #fff;
+  }
+
+  fieldset {
+    border-bottom: none;
+    border-top: none;
+    border-left: none;
+    border-right: 1px dashed white;
+  }
+
+  .fieldset-label {
+    color: hsl(56, 87.7%, 55%);
+  }
+
+  fieldset, #support {
+    display: inline;
+  }
+
+  .checkbox {
+    height: 18px;
+    width: 18px;
+    border-radius: 50px;
+  }
+
+  #line-style {
+    margin-top: -100px;
+    height: fit-content ;
+    width: -moz-fit-content;
+  }
+
+  #line-color {
+    width: -moz-fit-content;
+  }
+
+  #base {
+    margin-top: 4px;
+  }
+
+  .invisible {
+    visibility: hidden;
+  }
+
+
+</style>
+
+</body>
+</html>
